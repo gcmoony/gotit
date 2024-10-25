@@ -7,3 +7,10 @@ contextBridge.exposeInMainWorld("electron", {
   receive: (channel, func) =>
     ipcRenderer.on(channel, (event, ...args) => func(...args)),
 })
+
+// const { contextBridge, ipcRenderer } = require("electron/renderer")
+
+contextBridge.exposeInMainWorld("electronAPI", {
+  updateRow: (args) => ipcRenderer.invoke("row-update", args),
+  deleteRows: (args) => ipcRenderer.invoke("rows-delete", args),
+})

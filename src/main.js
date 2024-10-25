@@ -1,10 +1,10 @@
 const { app, BrowserWindow, ipcMain } = require("electron")
 const path = require("node:path")
-const fs = require("fs")
+const data = require("./sampleData.json")
 
 // Database stuff
 const sequalite = require("better-sqlite3")
-let db = new sequalite("foobar.db", { verbose: console.log })
+let db = new sequalite("foobar.db") //, { verbose: console.log })
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require("electron-squirrel-startup")) {
@@ -15,7 +15,7 @@ const createWindow = () => {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
     width: 1000,
-    height: 600,
+    height: 800,
     webPreferences: {
       preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
       nodeIntegration: true,
@@ -34,11 +34,8 @@ const createWindow = () => {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
-  // ipcMain.on("query:get-items", showAllFromDb)
   createWindow()
-
-  // On OS X it's common to re-create a window in the app when the
-  // dock icon is clicked and there are no other windows open.
+  // MacOS
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow()
@@ -46,28 +43,11 @@ app.whenReady().then(() => {
   })
 
   // Testing db stuff here
-  // initilizeDatabase()
-  createTableIntoDb("temp")
-  fillTableWithExamples()
-  // showAllFromDb()
+  createPartsTable()
+  fillPartsTable()
 })
 
-ipcMain.on("test", (e, args) => {
-  // console.log(args)
-  e.reply("test-reply", "From main")
-})
-
-ipcMain.on("log-message", (event, arg) => {
-  console.log(arg) // Print the message from the renderer to the main console
-  const data = showAllFromDb().then((ctx) => {
-    // console.log(JSON.stringify(ctx))
-    event.reply("log-reply", JSON.stringify(ctx)) // Send a reply back
-  })
-})
-
-// Quit when all windows are closed, except on macOS. There, it's common
-// for applications and their menu bar to stay active until the user quits
-// explicitly with Cmd + Q.
+// Quitting App
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
     app.quit()
@@ -77,10 +57,9 @@ app.on("window-all-closed", () => {
   db.close()
 })
 
-// In this file you can include the rest of your app's specific main process
-// code. You can also put them in separate files and import them here.
-async function showAllFromDb() {
-  const query = "SELECT * FROM parts"
+// For Database queries
+async function showAllFromDb(dbName = "parts") {
+  const query = `SELECT * FROM ${String(dbName)}`
   try {
     const parts = db.prepare(query).all()
     return parts
@@ -90,24 +69,22 @@ async function showAllFromDb() {
   }
 }
 
-async function createTableIntoDb(dbName) {
+async function createPartsTable() {
   const query = `
     CREATE TABLE IF NOT EXISTS parts (
-      id INTEGER PRIMARY KEY,
+      row_id INTEGER PRIMARY KEY,
+      id STRING,
       name STRING NOT NULL,
-      sku STRING UNIQUE,
+      sku STRING,
       price REAL,
       tax INTEGER,
       status STRING,
       track_inventory INTEGER,
       on_hand_count INTEGER,
-      category STRING,
+      category_01 STRING,
       cost REAL,
       map REAL,
       msrp REAL, 
-      markup REAL,
-      margin REAL,
-      rating REAL,
       priority INTEGER,
       category_02 STRING,
       source STRING,
@@ -117,141 +94,20 @@ async function createTableIntoDb(dbName) {
   db.exec(query)
 }
 
-async function fillTableWithExamples() {
-  const data = [
-    {
-      name: "barrel",
-      sku: "sku01",
-      price: 50.0,
-      tax: 1,
-      status: "active",
-      track_inventory: 1,
-      on_hand_count: 4,
-      category: "AR Part",
-      category_02: "Gun Components",
-      cost: 24.2,
-      msrp: 15.0,
-      map: 1.2,
-      markup: 35.0,
-      margin: 0.52,
-      rating: 7,
-      priority: 2,
-      source: "Manufacturer A",
-      location: "Warehouse 1",
-    },
-    {
-      name: "nut",
-      sku: "sku02",
-      price: 15.5,
-      tax: 1,
-      status: "active",
-      track_inventory: 1,
-      map: 1.2,
-      on_hand_count: 10,
-      category: "Hardware",
-      category_02: "Fasteners",
-      cost: 7.0,
-      msrp: 12.0,
-      markup: 22.0,
-      margin: 0.47,
-      rating: 8,
-      priority: 3,
-      source: "Supplier B",
-      location: "Warehouse 2",
-    },
-    {
-      name: "screw",
-      sku: "sku03",
-      price: 1.5,
-      tax: 0,
-      status: "active",
-      track_inventory: 1,
-      on_hand_count: 50,
-      map: 1.2,
-      category: "Hardware",
-      category_02: "Fasteners",
-      cost: 0.5,
-      msrp: 2.0,
-      markup: 1.0,
-      margin: 0.66,
-      rating: 9,
-      priority: 1,
-      source: "Supplier B",
-      location: "Shelf A3",
-    },
-    {
-      name: "handguard",
-      sku: "sku04",
-      price: 120.0,
-      tax: 1,
-      status: "active",
-      track_inventory: 1,
-      map: 1.2,
-      on_hand_count: 6,
-      category: "AR Part",
-      category_02: "Gun Components",
-      cost: 70.0,
-      msrp: 110.0,
-      markup: 50.0,
-      margin: 0.58,
-      rating: 6,
-      priority: 2,
-      source: "Manufacturer A",
-      location: "Warehouse 1",
-    },
-    {
-      name: "muzzle brake",
-      sku: "sku05",
-      price: 45.0,
-      tax: 1,
-      status: "active",
-      track_inventory: 1,
-      on_hand_count: 12,
-      map: 1.2,
-      category: "AR Part",
-      category_02: "Gun Components",
-      cost: 20.0,
-      msrp: 40.0,
-      markup: 25.0,
-      margin: 0.44,
-      rating: 8,
-      priority: 3,
-      source: "Supplier C",
-      location: "Shelf B2",
-    },
-    {
-      name: "buffer tube",
-      sku: "sku06",
-      price: 35.0,
-      tax: 1,
-      status: "active",
-      track_inventory: 1,
-      map: 1.2,
-      on_hand_count: 8,
-      category: "AR Part",
-      category_02: "Gun Components",
-      cost: 18.0,
-      msrp: 30.0,
-      markup: 17.0,
-      margin: 0.51,
-      rating: 7,
-      priority: 1,
-      source: "Manufacturer A",
-      location: "Warehouse 3",
-    },
-  ]
-
+function fillPartsTable() {
   const query = db.prepare(`INSERT OR REPLACE INTO parts 
-    (name, sku, price, tax, status, track_inventory, on_hand_count, category, category_02, cost, map, msrp, markup, margin, rating, priority, source, location) 
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+    (row_id, id, name, sku, price, tax, status, track_inventory, on_hand_count, category_01, category_02, cost, map, msrp, priority, source, location) 
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
 
   let isEmpty = true
 
-  const currentData = showAllFromDb().then((ctx) => {
+  const currentData = showAllFromDb("parts").then((ctx) => {
     isEmpty = ctx.length == 0
-    if (isEmpty) {
+    if (isEmpty && data) {
       data.forEach((item) => {
         query.run(
+          item.row_id,
+          item.id,
           item.name,
           item.sku,
           item.price,
@@ -264,9 +120,6 @@ async function fillTableWithExamples() {
           item.cost,
           item.map,
           item.msrp,
-          item.markup,
-          item.margin,
-          item.rating,
           item.priority,
           item.source,
           item.location
@@ -276,6 +129,105 @@ async function fillTableWithExamples() {
   })
 }
 
-// function initilizeDatabase() {
-//   db = new sequalite("foobar.db", { verbose: console.log })
-// }
+ipcMain.on("select-all", (event, arg) => {
+  const query = db.prepare(`SELECT * FROM ${arg}`)
+  console.log(query.run())
+})
+
+// To handle IPC
+ipcMain.on("table-request", (event, arg) => {
+  const data = showAllFromDb(arg)
+    .then((ctx) => {
+      event.reply(`${arg}-table-response`, JSON.stringify(ctx), "OK") // Send a reply back
+    })
+    .catch((err) => {
+      event.reply(`${arg}-table-response`, "An error has occurred")
+    })
+})
+
+ipcMain.handle("row-update", (event, arg) => {
+  console.log(arg)
+  prepareInsert(arg)
+  return "Hello from row-update"
+})
+
+ipcMain.handle("rows-delete", (event, arg) => {
+  console.log(arg)
+  prepareDelete(arg)
+  return "Hello from row-delete"
+})
+
+function prepareDelete(idList) {
+  for (let id of idList) {
+    if (testRowExists(id)) {
+      const query = db.prepare(`
+        DELETE FROM parts WHERE row_id = ?`)
+      query.run(id)
+    }
+  }
+}
+
+function prepareInsert(anObject) {
+  // Check if item exists in db
+  const exists = testRowExists(anObject.row_id)
+  const fields = Object.keys(anObject)
+  const cols = Object.values(anObject)
+  console.log("Result: ", exists)
+
+  // If new item
+  if (!exists) {
+    // Prepare queries
+    const [fieldString, colString] = formatQuery(0, fields, cols)
+    insertData(fieldString, colString, cols)
+  }
+  // If updating
+  else {
+    updateRow(anObject.row_id, fields, cols)
+  }
+}
+
+function formatQuery(offset, fieldList, colList) {
+  let fieldString = "("
+  let i
+  for (i = offset; i < fieldList.length - 1; i++) {
+    fieldString += fieldList[i] + ", "
+  }
+  fieldString += fieldList[i] + ")"
+
+  let colString = "("
+  for (i = offset; i < colList.length - 1; i++) {
+    colString += "?, "
+  }
+  colString += "?)"
+
+  return [fieldString, colString]
+}
+
+function updateRow(rowID, fields, colList) {
+  let setString = ""
+  let i
+  for (i = 1; i < fields.length - 1; i++) {
+    setString += `${fields[i]} = ?, `
+  }
+  setString += `${fields[i]} = ?`
+
+  setString = `UPDATE parts SET ${setString} WHERE row_id = ?`
+  colList = colList.slice(1)
+  colList.push(rowID)
+
+  const query = db.prepare(setString)
+  query.run(colList)
+}
+
+function testRowExists(rowID) {
+  console.log(`Testing ${rowID}`)
+  const query = db.prepare(`SELECT * FROM parts WHERE row_id == ${rowID}`)
+  return query.get() ? true : false
+}
+
+function insertData(fieldString, valueString, values) {
+  const query = db.prepare(`INSERT INTO parts
+    ${fieldString}
+    VALUES${valueString};`)
+  console.log("Insertion: ", query.run(values))
+}

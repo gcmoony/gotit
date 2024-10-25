@@ -1,0 +1,14 @@
+h1 {
+  font-size: 2em;
+}
+
+p {
+  font-size: 1em;
+  opacity: 75%;
+}
+
+nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
